@@ -1,0 +1,12 @@
+ifconfig eth0 50.0.0.1/30 up
+ifconfig eth2 hw ether 02:42:ac:0f:05:02
+ifconfig eth3 hw ether 02:42:ac:0f:05:03
+
+/etc/init.d/openvswitch-switch start
+
+ovs-vsctl add-br of5
+ovs-vsctl add-port of5 eth1
+ovs-vsctl add-port of5 eth2
+ovs-vsctl add-port of5 eth3
+ovs-vsctl set-controller of5 tcp:50.0.0.2:6633
+ovs-vsctl set bridge of5 protocols=[OpenFlow13]

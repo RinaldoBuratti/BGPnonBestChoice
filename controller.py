@@ -81,27 +81,20 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
             self.bgp_router_ip = self.__settings.BGP.get('router_id')
             self.bgp_router_mac = self.__settings.SWITCH_CONTROLLER_INFO.get('speaker_mac')
             self.as_number = self.__settings.BGP.get('local_as')
-            self.INFO_OTHER_AS = self.__settings.INFO_OTHER_AS
+            self.INFO_NEIGHBORS = self.__settings.INFO_NEIGHBORS
             self.neighbors = self.__settings.BGP.get('neighbors')
             self.neighbors_map = self.__settings.BGP
-        #Questo oggetto contiene informazioni sulle decisioni non best:
-        #chiave: indirizzo ip del router bgp che intende utilizzare una rotta non best
-        #valore.non_best_route: indirizzo ip del router il quale annuncia la rotta non best che si vuole utilizzare
-        #valore.id: id utilizzato negli annunci non best
-        self.speaker2nonBest = {'75.0.0.2':{'non_best_route': '75.0.0.5', 'id': 'as2'}, 
-                                '75.0.0.3':{'non_best_route': '75.0.0.4', 'id': 'as3'}}
-        self.nonBestChoiche = False
-        self.nonBestRoute = None
-        for elem in self.speaker2nonBest:
-            if elem == self.bgp_router_ip:
-                self.nonBestChoiche = True
-                self.nonBestID = self.speaker2nonBest[elem].get('id')
-                self.nonBestRoute = self.speaker2nonBest[elem].get('non_best_route')
-        #questi valore sono usati per indicare la destinazione del traffico non best e l'origine della rotta
-        self.subnetNonBestTraffic = '100.0.0.0/24'
-        self.ipNonBestTraffic = '100.0.0.0'
-        self.routeOrigin = '75.0.0.1'
+            self.speaker_port = self.__settings.SWITCH_CONTROLLER_INFO.get('speaker_port')
+            self.non_best_choices = self.__settings.NON_BEST_CHOICES
+
+        self.nonBestChoice = self.non_best_choices.get('non_best_choice')
+        self.nonBestID = self.non_best_choices.get('id')
+        self.nonBestRoute = self.non_best_choices.get('route')
+        self.subnetNonBestTraffic = self.non_best_choices.get('subnet_non_best_traffic')
+        self.ipNonBestTraffic = self.non_best_choices.get('ip_non_best_traffic')
+        self.nonBestRouteOrigin = self.non_best_choices.get('non_best_origin')
         self.bgp_nlri = None
+        self.nonBestAnnounceListSend = []
 
     @set_ev_cls(event.EventSwitchEnter)
     def switch_enter_handler(self, ev):
@@ -113,24 +106,24 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
         for peer in self.neighbors:
             #regole ARP
             match = parser.OFPMatch(eth_type=ether.ETH_TYPE_ARP, arp_spa=self.bgp_router_ip, arp_tpa=peer['address'])
-            actions = [parser.OFPActionSetField(eth_dst=self.INFO_OTHER_AS.get(peer['address']).get('mac')), 
-                        parser.OFPActionOutput(port=name2ports[self.INFO_OTHER_AS.get(peer['address']).get('port')])]
+            actions = [parser.OFPActionSetField(eth_dst=self.INFO_NEIGHBORS.get(peer['address']).get('mac')), 
+                        parser.OFPActionOutput(port=name2ports[self.INFO_NEIGHBORS.get(peer['address']).get('port')])]
             self.add_flow(datapath, 20, match, actions, 0)
 
             #regole per il peering
             match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ip_proto=6, ipv4_dst=peer['address'])
-            actions = [parser.OFPActionSetField(eth_dst=self.INFO_OTHER_AS.get(peer['address']).get('mac')), 
-                        parser.OFPActionOutput(port=name2ports[self.INFO_OTHER_AS.get(peer['address']).get('port')])]
+            actions = [parser.OFPActionSetField(eth_dst=self.INFO_NEIGHBORS.get(peer['address']).get('mac')), 
+                        parser.OFPActionOutput(port=name2ports[self.INFO_NEIGHBORS.get(peer['address']).get('port')])]
             self.add_flow(datapath, 20, match, actions, 0)
 
             #regole per annunci non best
             match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ip_proto=6, ipv4_dst=peer['address'])
-            actions = [parser.OFPActionSetField(eth_dst=self.INFO_OTHER_AS.get(peer['address']).get('mac')), 
-                        parser.OFPActionOutput(port=name2ports[self.INFO_OTHER_AS.get(peer['address']).get('port')])]
+            actions = [parser.OFPActionSetField(eth_dst=self.INFO_NEIGHBORS.get(peer['address']).get('mac')), 
+                        parser.OFPActionOutput(port=name2ports[self.INFO_NEIGHBORS.get(peer['address']).get('port')])]
             self.add_flow(datapath, 20, match, actions, 1)
 
         match = parser.OFPMatch(eth_type=ether.ETH_TYPE_ARP, arp_tpa=self.bgp_router_ip)
-        actions = [parser.OFPActionSetField(eth_dst=self.bgp_router_mac), parser.OFPActionOutput(port=name2ports['eth1'])]
+        actions = [parser.OFPActionSetField(eth_dst=self.bgp_router_mac), parser.OFPActionOutput(port=name2ports[self.speaker_port])]
         self.add_flow(datapath, 10, match, actions, 0)
 
         match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ipv4_dst='1.1.1.1', ipv4_src='2.2.2.2')
@@ -143,10 +136,10 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
 
         match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ip_proto=6, in_port=datapath.ofproto.OFPP_CONTROLLER)
         actions = [parser.OFPInstructionGotoTable(1)]
-        self.add_flow_for_goto(datapath, 100, match, actions, 0)
+        self.add_flow_go_to_table(datapath, 100, match, actions, 0)
 
         match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ip_proto=6, in_port=datapath.ofproto.OFPP_CONTROLLER)
-        actions = [parser.OFPActionSetField(eth_dst=self.bgp_router_mac), parser.OFPActionOutput(port=name2ports['eth1'])]
+        actions = [parser.OFPActionSetField(eth_dst=self.bgp_router_mac), parser.OFPActionOutput(port=name2ports[self.speaker_port])]
         self.add_flow(datapath, 20, match, actions, 1)
         
     def name_to_ports(self, ports):
@@ -163,7 +156,7 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
         datapath.send_msg(mod)
         print('regola scritta tabella 0')
 
-    def add_flow_for_goto(self, datapath, priority, match, actions, tableID):
+    def add_flow_go_to_table(self, datapath, priority, match, actions, tableID):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         mod = parser.OFPFlowMod(datapath=datapath, table_id=tableID, priority=priority, match=match, instructions=actions)
@@ -209,7 +202,7 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
             if p.protocol_name == 'BGPUpdate':
                 for attr in p.path_attributes:   
                     if attr.type == 16:
-                        print('ARRIVATO ANNUNCIO NON BEST')
+                        print('***********ANNUNCIO NON BEST***********\n')
                         print(p)
                         for pathAttr in p.path_attributes:
                             if pathAttr.type == 3:
@@ -217,9 +210,10 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
                         best = self.get_nexthop_best()
                         self._handle_bgp_non_best_announce(idNonBestMessage=attr.communities[0].id, 
                                             datapath=datapath, nexthopMessage=nexthopNonBest, first=False, best=best)
+                        return
 
             if protocol_name == 'ipv4':
-                if self.bgp_router_ip in self.speaker2nonBest.keys() and p.dst == '1.1.1.1':
+                if self.nonBestChoice and p.dst == '1.1.1.1':
                     print('ARRIVATO PACCHETTO DUMMY')
                     self.create_non_best_rules(datapath, ofproto, parser)
                     best = self.get_nexthop_best()
@@ -237,25 +231,30 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
 
     def _handle_bgp_non_best_announce(self, idNonBestMessage,  nexthopMessage, datapath, first, best):
         if not first:
-            if self.nonBestChoiche:
+            if self.nonBestChoice:
                 if idNonBestMessage == self.nonBestID:
                     self.delete_non_best_rules(datapath)
-                    print('LA ROTTA NON BEST CONTIENE UN CICLO')
+                    print('*************LA ROTTA NON BEST CONTIENE UN CICLO**************')
                     return
 
         sendCommunity = False
 
-        if nexthopMessage == best['nexthop'] or nexthopMessage == self.nonBestRoute:
+        if nexthopMessage == best['nexthop'] or nexthopMessage == self.nonBestRoute and not(idNonBestMessage in self.nonBestAnnounceListSend):
             sendCommunity = True
-            
+
         if sendCommunity:
-            for elem in self.INFO_OTHER_AS:
-                if elem != nexthopMessage and elem != self.routeOrigin:
-                    packet_non_best = self.create_non_best_packet(mac_dst=self.INFO_OTHER_AS.get(elem).get('mac'),
+            for elem in self.INFO_NEIGHBORS:
+                if elem != nexthopMessage and elem != self.nonBestRouteOrigin and not(first and elem == self.nonBestRoute):
+                    packet_non_best = self.create_non_best_packet(mac_dst=self.INFO_NEIGHBORS.get(elem).get('mac'),
                                                 mac_src=self.bgp_router_mac, ip_dst=elem, 
                                                 ip_src=self.bgp_router_ip, idNonBest=idNonBestMessage, best=best)
                     self._send_packet_to(datapath, packet_non_best)
-                    print('PROPAGATO ANNUNCIO NON BEST TO', elem)
+                    print('*************PROPAGATO ANNUNCIO NON BEST TO', elem, '****************')
+                    print('\n')
+            self.nonBestAnnounceListSend.append(idNonBestMessage)
+
+        else:
+            print('**********ANNUNCIO NON BEST SCARTATO***************\n')
 
     def create_non_best_packet(self, mac_dst, mac_src, ip_dst, ip_src, idNonBest, best):
         _eth = ethernet.ethernet(dst=mac_dst, src=mac_src, ethertype=ether.ETH_TYPE_IP)
@@ -305,20 +304,19 @@ class Bgp_Non_Best_Choice(app_manager.RyuApp):
         name2ports = self.name_to_ports(datapath.ports)
         for entry in rib:
             if not entry['best']:
-                for elem in self.speaker2nonBest:
-                    if elem == self.bgp_router_ip and self.speaker2nonBest[elem].get('non_best_ip') == entry['nexthop']:
-                        ip_dst = self.subnetNonBestTraffic
-                        eth_dst = self.INFO_OTHER_AS.get(entry['nexthop']).get('mac')
-                        port_dst = name2ports[self.INFO_OTHER_AS.get(entry['nexthop']).get('port')]
-                        
-                        match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ipv4_dst=ip_dst)
-                        actions = [parser.OFPActionSetField(eth_dst=eth_dst), parser.OFPActionOutput(port=port_dst)]
-                        
-                        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-                        mod = parser.OFPFlowMod(datapath=datapath, priority=100, match=match, instructions=inst, 
-                                    table_id=0, cookie=1, cookie_mask=0xFFFFFFFFFFFFFFFF)
-                        datapath.send_msg(mod)
-                        print('regola rotta non best scritta')        
+                if self.nonBestRoute == entry['nexthop']:
+                    ip_dst = self.subnetNonBestTraffic
+                    eth_dst = self.INFO_NEIGHBORS.get(entry['nexthop']).get('mac')
+                    port_dst = name2ports[self.INFO_NEIGHBORS.get(entry['nexthop']).get('port')]
+                    
+                    match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IP, ipv4_dst=ip_dst)
+                    actions = [parser.OFPActionSetField(eth_dst=eth_dst), parser.OFPActionOutput(port=port_dst)]
+                    
+                    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+                    mod = parser.OFPFlowMod(datapath=datapath, priority=100, match=match, instructions=inst, 
+                                table_id=0, cookie=1, cookie_mask=0xFFFFFFFFFFFFFFFF)
+                    datapath.send_msg(mod)
+                    print('regola rotta non best scritta')        
 
     def delete_non_best_rules(self, datapath):
         ofproto = datapath.ofproto

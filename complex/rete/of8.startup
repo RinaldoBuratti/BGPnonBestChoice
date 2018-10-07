@@ -1,0 +1,14 @@
+ifconfig eth0 80.0.0.1/30 up
+ifconfig eth2 hw ether 02:42:ac:0f:08:02
+ifconfig eth3 hw ether 02:42:ac:0f:08:03
+ifconfig eth4 hw ether 02:42:ac:0f:08:04
+
+/etc/init.d/openvswitch-switch start
+
+ovs-vsctl add-br of8
+ovs-vsctl add-port of8 eth1
+ovs-vsctl add-port of8 eth2
+ovs-vsctl add-port of8 eth3
+ovs-vsctl add-port of8 eth4
+ovs-vsctl set-controller of8 tcp:80.0.0.2:6633
+ovs-vsctl set bridge of8 protocols=[OpenFlow13]

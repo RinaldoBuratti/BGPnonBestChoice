@@ -3,45 +3,53 @@ import os
 
 # info on switch
 SWITCH_CONTROLLER_INFO = {
-    'controller_ip': '20.0.0.2',
-    'controller_mac': '02:42:ac:0c:02:00',
-    'speaker_ip': '75.0.0.2',
-    'speaker_mac': '02:42:ac:0c:02:01'
+    'controller_ip': '80.0.0.2',
+    'controller_mac': '02:42:ac:0c:08:00',
+    'speaker_ip': '75.0.0.8',
+    'speaker_mac': '02:42:ac:0c:08:01',
+    'speaker_port': 'eth1'
 }
 # key: is IP controller (of peering), value: is mac of the interface of OF-switch on peering Lan
-INFO_OTHER_AS = {
-    '75.0.0.1': {'mac': '02:42:ac:0f:01:02', 'port': 'eth2', 'as_number': 1},
-    '75.0.0.4': {'mac': '02:42:ac:0f:04:02', 'port': 'eth3', 'as_number': 4},
-    '75.0.0.5': {'mac': '02:42:ac:0f:05:03', 'port': 'eth4', 'as_number': 5}
+INFO_NEIGHBORS = {
+    '75.0.0.3': {'mac': '02:42:ac:0f:03:04', 'port': 'eth2', 'as_number': 3},
+    '75.0.0.5': {'mac': '02:42:ac:0f:05:03', 'port': 'eth4', 'as_number': 5},
+    '75.0.0.9': {'mac': '02:42:ac:0f:09:02', 'port': 'eth3', 'as_number': 9}
 }
 
+NON_BEST_CHOICES = {
+    'non_best_choice': True,
+    'route': '75.0.0.5',
+    'id': 'as8',
+    'subnet_non_best_traffic': '100.0.0.0/24',
+    'ip_non_best_traffic': '100.0.0.0',
+    'non_best_origin': '75.0.0.1'
+}
 # =============================================================================
 # BGP configuration.
 # =============================================================================
 BGP = {
     # AS number for this BGP instance.
-    'local_as': 2,
+    'local_as': 8,
 
     # BGP Router ID.
-    'router_id': '75.0.0.2',
+    'router_id': '75.0.0.8',
 
     # List of BGP neighbors.
     # The parameters for each neighbor are the same as the arguments of
     # BGPSpeaker.neighbor_add() method.
     'neighbors': [
         {
-            'address': '75.0.0.1',
-            'remote_as': 1,
+            'address': '75.0.0.3',
+            'remote_as': 3,
             'connect_mode': 'passive'
         },
         {
-            'address': '75.0.0.4',
-            'remote_as': 4
+            'address': '75.0.0.5',
+            'remote_as': 5
         },
         {
-            'address': '75.0.0.5',
-            'remote_as': 5,
-            'multi_exit_disc': 10
+            'address': '75.0.0.9',
+            'remote_as': 9
         }
     ]
 }

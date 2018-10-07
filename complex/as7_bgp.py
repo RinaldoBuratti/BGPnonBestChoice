@@ -3,41 +3,57 @@ import os
 
 # info on switch
 SWITCH_CONTROLLER_INFO = {
-    'controller_ip': '10.0.0.2',
-    'controller_mac': '02:42:ac:0c:01:00',
-    'speaker_ip': '75.0.0.1',
-    'speaker_mac': '02:42:ac:0c:01:01'
+    'controller_ip': '70.0.0.2',
+    'controller_mac': '02:42:ac:0c:07:00',
+    'speaker_ip': '75.0.0.7',
+    'speaker_mac': '02:42:ac:0c:07:01',
+    'speaker_port': 'eth1'
 }
 # key: is IP controller (of peering), value: is mac of the interface of OF-switch on peering Lan
-INFO_OTHER_AS = {
-    '75.0.0.2': {'mac': '02:42:ac:0f:02:02', 'port': 'eth2', 'as_number': 2},
-    '75.0.0.3': {'mac': '02:42:ac:0f:03:02', 'port': 'eth3', 'as_number': 3},
+INFO_NEIGHBORS = {
+    '75.0.0.4': {'mac': '02:42:ac:0f:04:05', 'port': 'eth3', 'as_number': 4},
+    '75.0.0.6': {'mac': '02:42:ac:0f:06:03', 'port': 'eth2', 'as_number': 6},
+    '75.0.0.12': {'mac': '02:42:ac:0f:12:04', 'port': 'eth4', 'as_number': 12}
 }
 
+NON_BEST_CHOICES = {
+    'non_best_choice': True,
+    'route': '75.0.0.12',
+    'id': 'as7',
+    'subnet_non_best_traffic': '100.0.0.0/24',
+    'ip_non_best_traffic': '100.0.0.0',
+    'non_best_origin': '75.0.0.1'
+}
 # =============================================================================
 # BGP configuration.
 # =============================================================================
 BGP = {
     # AS number for this BGP instance.
-    'local_as': 1,
+    'local_as': 7,
 
     # BGP Router ID.
-    'router_id': '75.0.0.1',
+    'router_id': '75.0.0.7',
 
     # List of BGP neighbors.
     # The parameters for each neighbor are the same as the arguments of
     # BGPSpeaker.neighbor_add() method.
     'neighbors': [
         {
-            'address': '75.0.0.2',
-            'remote_as': 2
+            'address': '75.0.0.4',
+            'remote_as': 4,
+            'connect_mode': 'passive'
         },
         {
-            'address': '75.0.0.3',
-            'remote_as': 3
+            'address': '75.0.0.6',
+            'remote_as': 6,
+            'connect_mode': 'passive'
         },
-    ],
-    'routes': [{'prefix': '100.0.0.0/24'}]
+        {
+            'address': '75.0.0.12',
+            'remote_as': 12,
+            'multi_exit_disc': 10
+        }
+    ]
 }
 
 # =============================================================================

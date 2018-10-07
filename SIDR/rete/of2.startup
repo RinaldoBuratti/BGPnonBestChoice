@@ -1,0 +1,12 @@
+ifconfig eth0 20.0.0.1/30 up
+ifconfig eth2 hw ether 02:42:ac:0f:02:02
+ifconfig eth3 hw ether 02:42:ac:0f:02:03
+
+/etc/init.d/openvswitch-switch start
+
+ovs-vsctl add-br of2
+ovs-vsctl add-port of2 eth1
+ovs-vsctl add-port of2 eth2
+ovs-vsctl add-port of2 eth3
+ovs-vsctl set-controller of2 tcp:20.0.0.2:6633
+ovs-vsctl set bridge of2 protocols=[OpenFlow13]

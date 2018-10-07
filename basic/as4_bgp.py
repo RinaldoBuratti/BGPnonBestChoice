@@ -6,14 +6,23 @@ SWITCH_CONTROLLER_INFO = {
     'controller_ip': '40.0.0.2',
     'controller_mac': '02:42:ac:0c:04:00',
     'speaker_ip': '75.0.0.4',
-    'speaker_mac': '02:42:ac:0c:04:01'
+    'speaker_mac': '02:42:ac:0c:04:01',
+    'speaker_port': 'eth1'
 }
 # key: is IP controller (of peering), value: is mac of the interface of OF-switch on peering Lan
-INFO_OTHER_AS = {
+INFO_NEIGHBORS = {
     '75.0.0.2': {'mac': '02:42:ac:0f:02:03', 'port': 'eth2', 'as_number': 2},
     '75.0.0.3': {'mac': '02:42:ac:0f:03:03', 'port': 'eth3', 'as_number': 3}
 }
 
+NON_BEST_CHOICES = {
+    'non_best_choice': False,
+    'route': None,
+    'id': None,
+    'subnet_non_best_traffic': '100.0.0.0/24',
+    'ip_non_best_traffic': '100.0.0.0',
+    'non_best_origin': '75.0.0.1'
+}
 # =============================================================================
 # BGP configuration.
 # =============================================================================

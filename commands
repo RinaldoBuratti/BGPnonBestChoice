@@ -1,0 +1,32 @@
+#necessario per eseguire gli script 
+nano usr/local/lib/python2.7/dist-packages/ryu/lib/hub.py
+ryu-manager hostlab/[directory dello script]
+
+#per controllare se lo switch OpenFlow è correttamente configurato
+ovs-vsctl show
+
+#sniffer
+tcpdump 
+	-i [interfaccia sulla quale si vuole sniffare il traffico] <any> per tutte le interfacce
+	-s [lunghezza in byte dei pacchetti impostare a 65535 per non troncare nulla]
+	-w [per scrivere sul file] <file>
+
+#per vedere le regole installate sullo switch
+ovs-ofctl -O OpenFlow13 dump-flows of1
+
+#per vedere l'installazione delle regole in tempo reale 
+watch ‘ovs-ofctl -O OpenFlow13 dump-flows of1’
+
+#per eseguire il controller
+ryu-manager hosthome/Scrivania/ryu/controller.py --bgp-app-config-file hosthome/Scrivania/ryu/<scenario desiderato>/asx_bgp.py
+
+#per eseguire il controller con log
+ryu-manager --log-file hosthome/Scrivania/bgp_log.txt hosthome/Scrivania/ryu/bgpPeer.py --bgp-app-config-file hosthome/Scrivania/ryu/<scenario desiderato>/asX_bgp.py
+
+#eseguire questi comandi per inviare il pacchetto di sollecitazione
+cd hosthome/Scrivania/ryu/<scenario desiderato>/
+chmod a+x dummy_XXX.py
+./dummy_XXX.py
+
+#per avviare il controller predefinito di ryu
+ryu-manager usr/local/lib/python2.7/dist-packages/ryu/services/protocols/bgp/application.py --bgp-app-config-file hosthome/Scrivania/ryu/as1_bgp.py

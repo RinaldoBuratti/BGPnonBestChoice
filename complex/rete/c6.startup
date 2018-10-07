@@ -1,0 +1,5 @@
+ifconfig eth0 60.0.0.2/30 up
+ifconfig eth0 hw ether 02:42:ac:0c:06:00
+
+ifconfig eth1 75.0.0.6/24 up
+ifconfig eth1 hw ether 02:42:ac:0c:06:01

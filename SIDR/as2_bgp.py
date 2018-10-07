@@ -3,40 +3,48 @@ import os
 
 # info on switch
 SWITCH_CONTROLLER_INFO = {
-    'controller_ip': '50.0.0.2',
-    'controller_mac': '02:42:ac:0c:05:00',
-    'speaker_ip': '75.0.0.5',
-    'speaker_mac': '02:42:ac:0c:05:01'
+    'controller_ip': '20.0.0.2',
+    'controller_mac': '02:42:ac:0c:02:00',
+    'speaker_ip': '75.0.0.2',
+    'speaker_mac': '02:42:ac:0c:02:01',
+    'speaker_port': 'eth1'
 }
 # key: is IP controller (of peering), value: is mac of the interface of OF-switch on peering Lan
-INFO_OTHER_AS = {
-    '75.0.0.2': {'mac': '02:42:ac:0f:02:04', 'port': 'eth3', 'as_number': 2},
-    '75.0.0.3': {'mac': '02:42:ac:0f:03:04', 'port': 'eth2', 'as_number': 5}
+INFO_NEIGHBORS = {
+    '75.0.0.1': {'mac': '02:42:ac:0f:01:02', 'port': 'eth2', 'as_number': 1},
+    '75.0.0.4': {'mac': '02:42:ac:0f:04:02', 'port': 'eth3', 'as_number': 4}
 }
 
+NON_BEST_CHOICES = {
+    'non_best_choice': False,
+    'route': None,
+    'id': None,
+    'subnet_non_best_traffic': '100.0.0.0/24',
+    'ip_non_best_traffic': '100.0.0.0',
+    'non_best_origin': '75.0.0.1'
+}
 # =============================================================================
 # BGP configuration.
 # =============================================================================
 BGP = {
     # AS number for this BGP instance.
-    'local_as': 5,
+    'local_as': 2,
 
     # BGP Router ID.
-    'router_id': '75.0.0.5',
+    'router_id': '75.0.0.2',
 
     # List of BGP neighbors.
     # The parameters for each neighbor are the same as the arguments of
     # BGPSpeaker.neighbor_add() method.
     'neighbors': [
         {
-            'address': '75.0.0.2',
-            'remote_as': 2,
+            'address': '75.0.0.1',
+            'remote_as': 1,
             'connect_mode': 'passive'
         },
         {
-            'address': '75.0.0.3',
-            'remote_as': 3,
-            'connect_mode': 'passive'
+            'address': '75.0.0.4',
+            'remote_as': 4
         }
     ]
 }
